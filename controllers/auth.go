@@ -2,12 +2,13 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/astaxie/beego/orm"
+	"moshopserver/models"
+	"moshopserver/services"
 
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/orm"
-	"github.com/harlanc/moshopserver/models"
-	"github.com/harlanc/moshopserver/services"
-	"github.com/harlanc/moshopserver/utils"
+	"moshopserver/utils"
 )
 
 type AuthController struct {
@@ -19,56 +20,69 @@ type AuthLoginBody struct {
 	UserInfo services.ResUserInfo `json:"userInfo"`
 }
 
-func (this *AuthController) Auth_LoginByWeixin() {
-
+func (c *AuthController) Auth_LoginByWeixin() {
 	var alb AuthLoginBody
-	body := this.Ctx.Input.RequestBody
+	body := c.Ctx.Input.RequestBody
 
 	err := json.Unmarshal(body, &alb)
-	//fmt.Print(alb)
-	clientIP := this.Ctx.Input.IP()
+	if err != nil {
+		fmt.Println("Auth_LoginByWeixin => Fail to json.Unmarshal, err: ", err)
+		data := utils.GetHTTPRtnJsonData(500, fmt.Sprintf("Auth_LoginByWeixin => Fail to json.Unmarshal, err: %v", err))
+		c.Ctx.Output.JSON(data, true, false)
+		return
+	}
+
+	clientIP := c.Ctx.Input.IP()
+	fmt.Println("+++++++++++++++++++++++++")
+	fmt.Println("Auth_LoginByWeixin => alb: ", alb)
+	fmt.Println("Auth_LoginByWeixin => clientIP: ", clientIP)
+	fmt.Println("+++++++++++++++++++++++++")
 
 	userInfo := services.Login(alb.Code, alb.UserInfo)
 	if userInfo == nil {
-
+		fmt.Println("Auth_LoginByWeixin => Fail to get userInfo")
+		data := utils.GetHTTPRtnJsonData(500, "Auth_LoginByWeixin => Fail to get userInfo")
+		c.Ctx.Output.JSON(data, true, false)
+		return
 	}
-
-	o := orm.NewOrm()
 
 	var user models.NideshopUser
-	usertable := new(models.NideshopUser)
-	err = o.QueryTable(usertable).Filter("weixin_openid", userInfo.OpenID).One(&user)
+	o := orm.NewOrm()
+	err = o.QueryTable(&models.NideshopUser{}).Filter("weixin_openid", userInfo.OpenID).One(&user)
 	if err == orm.ErrNoRows {
-		newuser := models.NideshopUser{Username: utils.GetUUID(), Password: "", RegisterTime: utils.GetTimestamp(),
+		newUser := models.NideshopUser{Username: utils.GetUUID(), Password: "", RegisterTime: utils.GetTimestamp(),
 			RegisterIp: clientIP, Mobile: "", WeixinOpenid: userInfo.OpenID, Avatar: userInfo.AvatarUrl, Gender: userInfo.Gender,
 			Nickname: userInfo.NickName}
-		o.Insert(&newuser)
-		o.QueryTable(usertable).Filter("weixin_openid", userInfo.OpenID).One(&user)
+		o.Insert(&newUser)
+		o.QueryTable(&models.NideshopUser{}).Filter("weixin_openid", userInfo.OpenID).One(&user)
 	}
 
-	userinfo := make(map[string]interface{})
-	userinfo["id"] = user.Id
-	userinfo["username"] = user.Username
-	userinfo["nickname"] = user.Nickname
-	userinfo["gender"] = user.Gender
-	userinfo["avatar"] = user.Avatar
-	userinfo["birthday"] = user.Birthday
+	userInfoMap := make(map[string]interface{})
+	userInfoMap["id"] = user.Id
+	userInfoMap["username"] = user.Username
+	userInfoMap["nickname"] = user.Nickname
+	userInfoMap["gender"] = user.Gender
+	userInfoMap["avatar"] = user.Avatar
+	userInfoMap["birthday"] = user.Birthday
 
 	user.LastLoginIp = clientIP
 	user.LastLoginTime = utils.GetTimestamp()
 
-	if _, err := o.Update(&user); err == nil {
-
+	_, err = o.Update(&user)
+	if err != nil {
+		fmt.Println("Auth_LoginByWeixin => Fail to Update user, err: ", err)
+		data := utils.GetHTTPRtnJsonData(500, fmt.Sprintf("Auth_LoginByWeixin => Fail to Update user, err: %v", err))
+		c.Ctx.Output.JSON(data, true, false)
+		return
 	}
 
 	sessionKey := services.Create(utils.Int2String(user.Id))
-	//fmt.Println("sessionkey==" + sessionKey)
+	fmt.Println("Auth_LoginByWeixin => sessionKey: " + sessionKey)
 
 	rtnInfo := make(map[string]interface{})
 	rtnInfo["token"] = sessionKey
-	rtnInfo["userInfo"] = userinfo
+	rtnInfo["userInfo"] = userInfo
 
-	utils.ReturnHTTPSuccess(&this.Controller, rtnInfo)
-	this.ServeJSON()
-
+	utils.ReturnHTTPSuccess(&c.Controller, rtnInfo)
+	c.ServeJSON()
 }

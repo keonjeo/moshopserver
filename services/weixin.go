@@ -5,11 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"github.com/astaxie/beego/httplib"
 
 	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/httplib"
-	"github.com/harlanc/moshopserver/utils"
 	"github.com/objcoding/wxpay"
+	"moshopserver/utils"
 )
 
 type WXLoginResponse struct {
@@ -49,16 +50,19 @@ type ResUserInfo struct {
 }
 
 func Login(code string, fullUserInfo ResUserInfo) *WXUserInfo {
-
 	secret := beego.AppConfig.String("weixin::secret")
-	appid := beego.AppConfig.String("weixin::appid")
+	appId := beego.AppConfig.String("weixin::appid")
+
+	fmt.Println("Login => secret: ", secret)
+	fmt.Println("Login => appId: ", appId)
+	fmt.Println("Login => code: ", code)
 
 	//https://developers.weixin.qq.com/miniprogram/dev/api-backend/auth.code2Session.html
 	req := httplib.Get("https://api.weixin.qq.com/sns/jscode2session")
 	req.Param("grant_type", "authorization_code")
 	req.Param("js_code", code)
 	req.Param("secret", secret)
-	req.Param("appid", appid)
+	req.Param("appid", appId)
 
 	var res WXLoginResponse
 	req.ToJSON(&res)
@@ -66,19 +70,18 @@ func Login(code string, fullUserInfo ResUserInfo) *WXUserInfo {
 	s := sha1.New()
 	s.Write([]byte(fullUserInfo.RawData + res.SessionKey))
 	sha1 := s.Sum(nil)
-	sha1hash := hex.EncodeToString(sha1)
+	sha1Hash := hex.EncodeToString(sha1)
 
-	// fmt.Println(fullUserInfo.RawData + res.SessionKey)
-	// fmt.Println(fullUserInfo.Signature)
-	// fmt.Println(sha1hash)
+	fmt.Println("fullUserInfo.RawData: ", fullUserInfo.RawData)
+	fmt.Println("res.SessionKey: ", res.SessionKey)
 
-	if fullUserInfo.Signature != sha1hash {
+	if fullUserInfo.Signature != sha1Hash {
+		fmt.Println("Login => Signature not match, fullUserInfo.Signature: ", fullUserInfo.Signature, ", sha1Hash: ", sha1Hash)
 		return nil
 	}
-	userinfo := DecryptUserInfoData(res.SessionKey, fullUserInfo.EncryptedData, fullUserInfo.IV)
 
-	return userinfo
-
+	userInfo := DecryptUserInfoData(res.SessionKey, fullUserInfo.EncryptedData, fullUserInfo.IV)
+	return userInfo
 }
 
 func DecryptUserInfoData(sessionKey string, encryptedData string, iv string) *WXUserInfo {
@@ -88,18 +91,20 @@ func DecryptUserInfoData(sessionKey string, encryptedData string, iv string) *WX
 	i, _ := base64.StdEncoding.DecodeString(iv)
 
 	decryptedData, err := utils.AesCBCDecrypt(ed, sk, i)
-
 	if err != nil {
+		fmt.Println("DecryptUserInfoData => Fail to utils.AesCBCDecrypt, err: ", err)
 		return nil
 	}
 
-	var wxuserinfo WXUserInfo
-	//fmt.Println(string(decryptedData))
-	err = json.Unmarshal(decryptedData, &wxuserinfo)
+	var wxUserInfo WXUserInfo
+	fmt.Println(string(decryptedData))
+	err = json.Unmarshal(decryptedData, &wxUserInfo)
 	if err != nil {
-
+		fmt.Println("DecryptUserInfoData => Fail to json.Unmarshal, err: ", err)
+		return nil
 	}
-	return &wxuserinfo
+
+	return &wxUserInfo
 }
 
 type PayInfo struct {
@@ -111,20 +116,23 @@ type PayInfo struct {
 }
 
 func CreateUnifiedOrder(payinfo PayInfo) (wxpay.Params, error) {
+	appId := beego.AppConfig.String("weixin::appid")
+	mchId := beego.AppConfig.String("weixin::mch_id")
+	apiKey := beego.AppConfig.String("weixin::apikey")
+	notifyUrl := beego.AppConfig.String("weixin::notify_url")
 
-	appid := beego.AppConfig.String("weixin::appid")
-	mchid := beego.AppConfig.String("weixin::mch_id")
-	apikey := beego.AppConfig.String("weixin::apikey")
-	notifyurl := beego.AppConfig.String("weixin::notify_url")
-	account := wxpay.NewAccount(appid, mchid, apikey, false)
+	account := wxpay.NewAccount(appId, mchId, apiKey, false)
 	client := wxpay.NewClient(account)
 	params := make(wxpay.Params)
+
 	params.SetString("body", payinfo.Body).
 		SetString("out_trade_no", payinfo.OutTradeNo).
 		SetInt64("total_fee", payinfo.TotalFee).
 		SetString("spbill_create_ip", payinfo.SpbillCreateIp).
-		SetString("notify_url", notifyurl).
+		SetString("notify_url", notifyUrl).
 		SetString("trade_type", "APP")
-	return client.UnifiedOrder(params)
 
+	fmt.Println("CreateUnifiedOrder => params: ", params)
+
+	return client.UnifiedOrder(params)
 }

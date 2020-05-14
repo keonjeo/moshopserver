@@ -4,13 +4,10 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-func GetRegionName(regionid int) string {
-
+func GetRegionName(regionId int) string {
 	o := orm.NewOrm()
-	regiontable := new(NideshopRegion)
 	var region NideshopRegion
-	o.QueryTable(regiontable).Filter("id", regionid).One(&region)
+	o.QueryTable(&NideshopRegion{}).Filter("id", regionId).One(&region)
 
 	return region.Name
-
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -425,15 +426,29 @@ type NideshopUserLevel struct {
 	Name        string `json:"name"`
 }
 
-// type User struct {
-// 	Id   int    `orm:"not null pk autoincr INT(11)"`
-// 	Name string `orm:"not null default '' VARCHAR(100)"`
-// }
+var (
+	maxIdleConn = 10
+	maxOpenConn = 30
+)
 
-func init() {
+func InitDB() {
+
+	err := orm.RegisterDriver("mysql", orm.DRMySQL)
+	if err != nil {
+		panic("fail to orm.RegisterDriver")
+	}
 
 	// set default database
-	orm.RegisterDataBase("default", "mysql", "root:123@tcp(127.0.0.1:3306)/nideshop?charset=utf8mb4", 30)
+	mysqlDNS := fmt.Sprintf("root:123456@tcp(192.168.10.128:3306)/nideshop?charset=utf8mb4&loc=Local")
+	err = orm.RegisterDataBase("default", "mysql", mysqlDNS)
+	if err != nil {
+		panic("fail to orm.RegisterDataBase")
+	}
+
+	orm.SetMaxIdleConns("default", maxIdleConn)
+	orm.SetMaxOpenConns("default", maxOpenConn)
+
+	orm.Debug = true
 
 	// register model
 	orm.RegisterModel(new(NideshopAd))
@@ -485,5 +500,4 @@ func init() {
 	orm.RegisterModel(new(NideshopUser))
 	orm.RegisterModel(new(NideshopUserCoupon))
 	orm.RegisterModel(new(NideshopUserLevel))
-
 }

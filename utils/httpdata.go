@@ -13,14 +13,13 @@ type HTTPData struct {
 }
 
 func ReturnHTTPSuccess(this *beego.Controller, val interface{}) {
-
-	rtndata := HTTPData{
+	rtnData := HTTPData{
 		ErrNo:  0,
 		ErrMsg: "",
 		Data:   val,
 	}
 
-	data, err := json.Marshal(rtndata)
+	data, err := json.Marshal(rtnData)
 	if err != nil {
 		this.Data["json"] = err
 	} else {
@@ -28,15 +27,12 @@ func ReturnHTTPSuccess(this *beego.Controller, val interface{}) {
 	}
 }
 
-func GetHTTPRtnJsonData(errno int, errmsg string) interface{} {
-
-	rtndata := HTTPData{
-		ErrNo:  errno,
-		ErrMsg: errmsg,
+func GetHTTPRtnJsonData(errCode int, errMsg string) interface{} {
+	rtnData := HTTPData{
+		ErrNo:  errCode,
+		ErrMsg: errMsg,
 		Data:   nil,
 	}
-	data, _ := json.Marshal(rtndata)
-
+	data, _ := json.Marshal(rtnData)
 	return json.RawMessage(string(data))
-
 }

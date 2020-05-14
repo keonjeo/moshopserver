@@ -2,22 +2,19 @@ package models
 
 import (
 	"github.com/astaxie/beego/orm"
-	"github.com/harlanc/moshopserver/utils"
+	"moshopserver/utils"
 )
 
-func GetChildCategoryId(categoryid int) []int64 {
-
+func GetChildCategoryId(categoryId int) []int64 {
 	o := orm.NewOrm()
-	categorytable := new(NideshopCategory)
-	var childids []orm.Params
-	o.QueryTable(categorytable).Filter("parent_id", categoryid).Limit(10000).Values(&childids, "id")
-	childintids := utils.ExactMapValues2Int64Array(childids, "Id")
-	return childintids
+	var childIds []orm.Params
+	o.QueryTable(&NideshopCategory{}).Filter("parent_id", categoryId).Limit(10000).Values(&childIds, "id")
+	childIntIds := utils.ExactMapValues2Int64Array(childIds, "Id")
+	return childIntIds
 }
 
-func GetCategoryWhereIn(categoryid int) []int64 {
-
-	childintids := GetChildCategoryId(categoryid)
-	childintids = append(childintids, int64(categoryid))
-	return childintids
+func GetCategoryWhereIn(categoryId int) []int64 {
+	childCategoryIds := GetChildCategoryId(categoryId)
+	childCategoryIds = append(childCategoryIds, int64(categoryId))
+	return childCategoryIds
 }

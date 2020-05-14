@@ -3,18 +3,18 @@ package controllers
 import (
 	"github.com/astaxie/beego"
 	"github.com/astaxie/beego/orm"
-	"github.com/harlanc/moshopserver/models"
-	"github.com/harlanc/moshopserver/utils"
+	"moshopserver/models"
+	"moshopserver/utils"
 )
 
 type CommentController struct {
 	beego.Controller
 }
 
-func (this *CommentController) Comment_Post() {
-	typeId := this.GetString("typeId")
-	valueId := this.GetString("valueId")
-	content := this.GetString("content")
+func (c *CommentController) Comment_Post() {
+	typeId := c.GetString("typeId")
+	valueId := c.GetString("valueId")
+	content := c.GetString("content")
 
 	inttypeId := utils.String2Int(typeId)
 	intvalueId := utils.String2Int(valueId)
@@ -33,9 +33,9 @@ func (this *CommentController) Comment_Post() {
 	o := orm.NewOrm()
 	_, err := o.Insert(&comment)
 	if err != nil {
-		this.Abort("添加评论成功")
+		c.Abort("添加评论成功")
 	} else {
-		this.Abort("评论保存失败")
+		c.Abort("评论保存失败")
 	}
 
 }
@@ -45,10 +45,10 @@ type CommentCountRtnJson struct {
 	HasPicCount int
 }
 
-func (this *CommentController) Comment_Count() {
+func (c *CommentController) Comment_Count() {
 
-	typeId := this.GetString("typeId")
-	valueId := this.GetString("valueId")
+	typeId := c.GetString("typeId")
+	valueId := c.GetString("valueId")
 	inttypeId := utils.String2Int(typeId)
 	intvalueId := utils.String2Int(valueId)
 
@@ -69,8 +69,8 @@ func (this *CommentController) Comment_Count() {
 	o.Raw(sql).QueryRows(&list)
 	haspiccount := len(list)
 
-	utils.ReturnHTTPSuccess(&this.Controller, CommentCountRtnJson{allcount, haspiccount})
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, CommentCountRtnJson{allcount, haspiccount})
+	c.ServeJSON()
 }
 
 //It may need to be refactored.
@@ -97,13 +97,13 @@ type CommenListtRtnJson struct {
 	PicList  []models.NideshopCommentPicture
 }
 
-func (this *CommentController) Comment_List() {
+func (c *CommentController) Comment_List() {
 
-	typeId := this.GetString("typeId")
-	valueId := this.GetString("valueId")
-	page := this.GetString("page")
-	size := this.GetString("size")
-	showType := this.GetString("showType")
+	typeId := c.GetString("typeId")
+	valueId := c.GetString("valueId")
+	page := c.GetString("page")
+	size := c.GetString("size")
+	showType := c.GetString("showType")
 	inttypeId := utils.String2Int(typeId)
 	intvalueId := utils.String2Int(valueId)
 
@@ -164,7 +164,7 @@ func (this *CommentController) Comment_List() {
 	}
 	pagedata.Data = rtncomments
 
-	utils.ReturnHTTPSuccess(&this.Controller, pagedata)
-	this.ServeJSON()
+	utils.ReturnHTTPSuccess(&c.Controller, pagedata)
+	c.ServeJSON()
 
 }

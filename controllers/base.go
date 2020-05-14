@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"github.com/harlanc/moshopserver/services"
-	"github.com/harlanc/moshopserver/utils"
+	"moshopserver/services"
+	"moshopserver/utils"
 )
 
 // type BaseController struct {
@@ -31,6 +31,6 @@ import (
 // }
 
 func getLoginUserId() int {
-	intuserId := utils.String2Int(services.LoginUserId)
-	return intuserId
+	userId := utils.String2Int(services.LoginUserId)
+	return userId
 }

@@ -2,11 +2,10 @@ package routers
 
 import (
 	"github.com/astaxie/beego"
-	"github.com/harlanc/moshopserver/controllers"
+	"moshopserver/controllers"
 )
 
 func init() {
-
 	beego.Router("api/index/index", &controllers.IndexController{}, "get:Index_Index")
 
 	beego.Router("api/catalog/index", &controllers.CatalogController{}, "get:Catalog_Index")
